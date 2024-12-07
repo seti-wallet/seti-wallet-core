@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Logger, Param, ParseIntPipe, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Logger, NotFoundException, Param, ParseIntPipe, Post } from "@nestjs/common";
 import { CoreRepository } from "./core.repository";
 import { CoreService } from "./core.service";
 
@@ -33,15 +33,21 @@ export class CoreController {
     // Iniciar una nueva transacción para la consignación 
     const queryRunner = this.coreRepository.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+
 
     try {
+      await queryRunner.startTransaction();
       const result = await this.coreRepository.consignarMonto(queryRunner, cuentaNumero, valorNumero);
       await queryRunner.commitTransaction();
       return result;
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      throw error;
+
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+
+      throw new InternalServerErrorException('Error inesperado', error.message);
     } finally {
       await queryRunner.release();
     }
@@ -60,25 +66,33 @@ export class CoreController {
 
     const cuentaNumero = parseInt(cuenta, 10);
     const valorNumero = parseFloat(valor);
-    console.log('a');
+
+    console.log('entra');
     if (isNaN(cuentaNumero) || isNaN(valorNumero)) { throw new BadRequestException('Los parámetros deben ser números.'); }
+
     const queryRunner = this.coreRepository.createQueryRunner();
     await queryRunner.connect();
-    await queryRunner.startTransaction();
+
+
     try {
-      console.log('b');
+      await queryRunner.startTransaction();
+      console.log('entrando controller try');
       const result = await this.coreRepository.retirarMonto(queryRunner, cuentaNumero, valorNumero);
-      console.log('c');
+      console.log('antes del primer commit');
       await queryRunner.commitTransaction();
       return result;
-    } catch (error) { 
-      await queryRunner.rollbackTransaction();
-       throw error; 
-      } finally { 
-        await queryRunner.release(); 
-      }
-  }
+    } catch (error) {
+      if (queryRunner.isTransactionActive) { await queryRunner.rollbackTransaction(); }
 
+      if (error instanceof NotFoundException) { throw new NotFoundException(error.message); }
+
+      if (error instanceof BadRequestException) { throw new BadRequestException(error.message); }
+
+      throw new InternalServerErrorException('Error', error.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
   /**
        * Method retirarMonto
        * @param cuenta
