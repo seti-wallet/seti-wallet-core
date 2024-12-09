@@ -7,7 +7,9 @@ import { CoreModule } from './app/core/core.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
     TypeOrmModule.forRootAsync({ useClass: ConfigMySql }),
    
     CoreModule,
