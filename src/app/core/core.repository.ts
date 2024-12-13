@@ -5,7 +5,7 @@ import {
     BadRequestException,
     Injectable,
 } from '@nestjs/common';
-import { DataSource } from "typeorm";
+import { DataSource, QueryRunner } from "typeorm";
 import { InjectDataSource } from '@nestjs/typeorm';
 import { HttpService } from '@nestjs/axios';
 import { SaldosDiariosEntity } from "../entities/saldo.entity";
@@ -31,9 +31,15 @@ export class CoreRepository {
       * @param valor
       * @returns
       */
-    async consignarMonto(queryRunner, cuenta: number, valor: number) {
+    async consignarMonto(cuenta: number, valor: number) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
         try {
 
+            if (isNaN(cuenta) || isNaN(valor)) {
+                throw new BadRequestException('Los parámetros deben ser números.');
+            }
             const repo = queryRunner.manager.getRepository(SaldosDiariosEntity);
             const movimientosRepo = queryRunner.manager.getRepository(MovimientosEntity);
 
@@ -46,14 +52,12 @@ export class CoreRepository {
                 throw new NotFoundException(`No se encontró el número de cuenta: ${cuenta}`);
             }
 
-
             const fechaActual = new Date();
 
             saldoExistente.saldo = Number(saldoExistente.saldo) + Number(valor); // Convertir a número y sumar 
             saldoExistente.fecha = fechaActual;
 
-            // Guardar la actualización del saldo 
-            await repo.save(saldoExistente);
+           
 
             // Registrar el movimiento en movimientos 
             const movimiento = new MovimientosEntity();
@@ -67,14 +71,35 @@ export class CoreRepository {
             movimiento.origen = "1";
             await movimientosRepo.save(movimiento);
 
+            await queryRunner.manager.save(saldoExistente);
+            await queryRunner.commitTransaction();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
+
             return saldoExistente;
 
-        } catch (error) { throw error; }
+        } catch (error) {
+            Logger.error({
+                method: `${this.MODULE_NAME}.consignarMonto`,
+                message: error,
+            });
+            await queryRunner.rollbackTransaction();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+
+            if (error instanceof NotFoundException) {
+                throw new NotFoundException(error.message);
+            }
+
+            throw new InternalServerErrorException('Error inesperado', error.message);
+        }
+
     }
-
-
-
-
 
     /**
          * Method retirarMonto
@@ -82,9 +107,16 @@ export class CoreRepository {
          * @param valor
          * @returns
          */
-    async retirarMonto(queryRunner, cuenta: number, valor: number): Promise<string> {
-        const repos = queryRunner.manager.getRepository(SaldosDiariosEntity);
+    async retirarMonto(cuenta: number, valor: number) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+        
         try {
+            if (isNaN(cuenta) || isNaN(valor)) {
+                throw new BadRequestException('Los parámetros deben ser números.');
+            }
+
             const repo = queryRunner.manager.getRepository(SaldosDiariosEntity);
             const movimientosRepo = queryRunner.manager.getRepository(MovimientosEntity);
 
@@ -104,10 +136,12 @@ export class CoreRepository {
 
             const fechaActual = new Date();
             saldoExistente.saldo = Number(saldoExistente.saldo) - Number(valor);
-            // Convertir a número y restar 
+            
             saldoExistente.fecha = fechaActual;
 
-            await repo.save(saldoExistente);
+           
+
+             // Registrar el movimiento en movimientos
             const movimiento = new MovimientosEntity();
             movimiento.canal = 1;
             movimiento.clienteProducto = 3;
@@ -118,10 +152,35 @@ export class CoreRepository {
             movimiento.naturaleza = "DB";
             movimiento.origen = "1";
             await movimientosRepo.save(movimiento);
-            return 'Retiro realizado con éxito';
-        } catch (error) { throw error; }
-    }
 
+            await queryRunner.manager.save(saldoExistente);
+            await queryRunner.commitTransaction();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
+
+            return saldoExistente;
+        } catch (error) {
+            Logger.error({
+                method: `${this.MODULE_NAME}.retirarMonto`,
+                message: error,
+            });
+            await queryRunner.rollbackTransaction();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+
+            if (error instanceof NotFoundException) {
+                throw new NotFoundException(error.message);
+            }
+
+            throw new InternalServerErrorException('Error inesperado', error.message);
+        }
+
+    }
 
     /**
         * Method transferirMonto
@@ -131,40 +190,45 @@ export class CoreRepository {
         * @returns
         */
     async transferirMonto(cuentaOrigen: number, cuentaDestino: number, valor: number): Promise<string> {
-        // QueryRunner para manejar las transacciones manualmente
+        
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
-        //Conecta y empieza una transacción con startTransaction()
         await queryRunner.startTransaction();
 
         try {
+            if (isNaN(cuentaOrigen) || isNaN(cuentaDestino) || isNaN(valor)) {
+                throw new BadRequestException('Los parámetros deben ser números.');
+              }
             // Retirar monto de la cuenta origen 
-            const retiroMonto = await this.retirarMonto(queryRunner, cuentaOrigen, valor);
+            const retiroMonto = await this.retirarMonto(cuentaOrigen, valor);
             console.log(`Monto retirado de la cuenta ${retiroMonto}`);
 
-
-            console.log(`Monto retirado de la cuenta ${cuentaOrigen}`);
-
             // Consignar monto en la cuenta destino 
-            await this.consignarMonto(queryRunner, cuentaDestino, valor);
+            await this.consignarMonto(cuentaDestino, valor);
             console.log(`Monto consignado en la cuenta ${cuentaDestino}`);
-            await queryRunner.commitTransaction();
+
             return 'Transferencia realizada con éxito';
 
-
-
-            //En caso de error, hace rollbackTransaction().
         } catch (error) {
-            await queryRunner.rollbackTransaction();
             Logger.error({
                 method: `${this.MODULE_NAME}.transferirMonto`,
-                message: error.message,
+                message: error,
             });
-            throw error;
-        } finally {
-            //Liberar Recursos: Libera el QueryRunner con release().
-            await queryRunner.release();
+            await queryRunner.rollbackTransaction();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+
+            if (error instanceof NotFoundException) {
+                throw new NotFoundException(error.message);
+            }
+
+            throw new InternalServerErrorException('Error inesperado', error.message);
         }
+
     }
 }
 
