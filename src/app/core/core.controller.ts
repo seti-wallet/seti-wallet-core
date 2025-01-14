@@ -1,9 +1,10 @@
-import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Logger, NotFoundException, Param, ParseIntPipe, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Logger, NotFoundException, Param, ParseIntPipe, Post, Inject, Injectable } from "@nestjs/common";
 import { CoreRepository } from "./core.repository";
 import { CoreService } from "./core.service";
-
+import { ClientProxy, MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('core')
+//@Inject('RABBITMQ_SERVICE')
 export class CoreController {
   private readonly MODULE_NAME = 'CoreController';
   constructor(
