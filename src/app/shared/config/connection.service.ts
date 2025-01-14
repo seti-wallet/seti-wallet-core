@@ -9,11 +9,11 @@ export class ConfigMySql implements TypeOrmOptionsFactory {
   createTypeOrmOptions(): TypeOrmModuleOptions {
     return {
       type: 'mysql',
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT),
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
+      host: '192.168.9.225',
+      port: 3306,
+      username: 'arq1',
+      password: '2wgzlVxFoU#zUbMg80qz',
+      database: 'arq1',
       entities: [
    
        SaldosDiariosEntity,

@@ -11,8 +11,8 @@ export class CoreController {
     private coreService: CoreService,
     private coreRepository: CoreRepository,
     private readonly logger: Logger,
+    //private readonly rabbitMqClient: ClientProxy,
   ) { }
-
 
   /**
       * Method consignarMonto
@@ -35,6 +35,11 @@ export class CoreController {
     const queryRunner = this.coreRepository.createQueryRunner();
     await queryRunner.connect();
 
+    //const payload = { cuenta: cuentaNumero, valor: valorNumero };
+    //const response_1 = this.rabbitMqClient.emit('consignar_event', payload); // 'consignar_event' es el nombre del evento
+
+    //console.log(payload)
+    //console.log(response_1)
 
     try {
       await queryRunner.startTransaction();
@@ -108,4 +113,20 @@ export class CoreController {
     return this.coreRepository.transferirMonto(cuentaOrigen, cuentaDestino, valor);
   }
 
+  @MessagePattern('retiroMQ') //Escucha los mensajes con el patrón realizar_retiro
+    async handleRetiro(@Payload() data: { id: number; monto: number }) {
+      const queryRunner = this.coreRepository.createQueryRunner();
+      await queryRunner.connect();
+
+    try {
+      console.log('Inicio de handleRetiro');
+      console.log(`Datos recibidos: ${JSON.stringify(data)}`);
+      console.log(`Mensaje de Retiro recibido: ID=${data.id}, Monto=${data.monto}`);
+      return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
+    } catch (error) {
+    console.error('Error en handleRetiro:', error);
+    throw new Error('Internal server error');
+  }
+  }
+  
 }
