@@ -18,19 +18,6 @@ import { RabbitMQModule } from './app/core/rabbitmq.module';
     }),
     TypeOrmModule.forRootAsync({ useClass: ConfigMySql }),
     CoreModule,
-    /*ClientsModule.register([
-        {
-         name: 'CoreService', // Nombre del servicio
-         transport: Transport.RMQ, // Transportador RabbitMQ
-         options: {
-          urls: ['amqp://admin:seti2024@192.168.9.44:30001'], // URL de RabbitMQ
-          queue: 'jairo-edu-viky-TransaccionesQueue', // Nombre de la cola
-          queueOptions: {
-           durable: true, // Asegura que la cola sea durable
-          },
-         },
-        },
-        ]),*/
     RabbitMQModule,
      ],
   controllers: [],

@@ -11,10 +11,12 @@ import { HttpService } from '@nestjs/axios';
 import { SaldosDiariosEntity } from "../entities/saldo.entity";
 import { MovimientosEntity } from '../entities/movimiento.entity';
 import { SaldoConsumerService } from "./core.saldoconsumerservice";
+import { RabbitMQService } from './rabbitmq.service';
 
 @Injectable()
 export class CoreRepository {
     private readonly MODULE_NAME = 'CoreRepository';
+    private rabbitMQservice: RabbitMQService;
 
     constructor(
         private readonly logger: Logger,
@@ -32,6 +34,7 @@ export class CoreRepository {
       * @returns
       */
     async consignarMonto(queryRunner, cuenta: number, valor: number) {
+        const messageMQ = {id:1, content:'mensaje'}
         try {
 
             const repo = queryRunner.manager.getRepository(SaldosDiariosEntity);
@@ -66,15 +69,13 @@ export class CoreRepository {
             movimiento.naturaleza = "DB";
             movimiento.origen = "1";
             await movimientosRepo.save(movimiento);
+            
+            //await this.rabbitMQservice.sendMessage('messageMQ', messageMQ);
 
             return saldoExistente;
 
         } catch (error) { throw error; }
     }
-
-
-
-
 
     /**
          * Method retirarMonto

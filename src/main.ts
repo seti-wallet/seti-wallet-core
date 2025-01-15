@@ -6,11 +6,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(3001);
 
- const microservice = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+  app.connectMicroservice( {
   transport: Transport.RMQ,
   options: {
    urls: ['amqp://admin:seti2024@192.168.9.44:30001'], 
-   queue: 'jairo-edu-viky-TransaccionesQueue', 
+   queue: 'victorbotero-transactions', 
    queueOptions: {
     durable: true,
    },
@@ -18,24 +18,7 @@ async function bootstrap() {
   },
  });
 
- const client: ClientProxy = ClientProxyFactory.create({
-    transport: Transport.RMQ,
-    options: {
-     urls: ['amqp://admin:seti2024@192.168.9.44:30001'], 
-     queue: 'jairo-edu-viky-TransaccionesQueue',
-     queueOptions: { durable: true }, 
-    },
-   });
-
-   client.send('retiroMQ', { id: '1', monto: 1 }).subscribe((response) => {
-    console.log('Respuesta del microservicio:', response);
-   });
-
-   /*client.send('consignar/1', { valor: 1 }).subscribe((response) => {
-    console.log('Respuesta del microservicio_2:', response);
-   });*/
-
- await microservice.listen();
+ await app.startAllMicroservices();
  console.log('Microservicio de RabbitMQ escuchando...');
 }
 

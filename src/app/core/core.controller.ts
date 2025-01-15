@@ -54,8 +54,12 @@ export class CoreController {
     try {
       await queryRunner.startTransaction();
       const result = await this.coreRepository.consignarMonto(queryRunner, cuentaNumero, valorNumero);
-      await this.appService.handleRequest(messageMQ);
       await queryRunner.commitTransaction();
+      
+      setImmediate(async() => {
+      await this.appService.handleRequest(messageMQ);
+      });
+
       return result;
       
     } catch (error) {
@@ -106,25 +110,7 @@ export class CoreController {
         throw new BadRequestException(error.response, error.message);
       }
     }
-    /*try {
-      return await this.coreRepository.retirarMonto(
-        cuentaNumero,
-        valorNumero,
-      );
-    } catch (error) {
-      if (error instanceof InternalServerErrorException) {
-        throw new InternalServerErrorException(error.message);
-      }
-      if (error instanceof NotFoundException) {
-        throw new NotFoundException(error.message);
-      }
-      else {
-        throw new BadRequestException(error.response, error.message);
-      }
-    }*/
   }
-
-
 
   /**
        * Method retirarMonto
@@ -158,26 +144,5 @@ export class CoreController {
       }
     }
   }
-
-
-  @MessagePattern('retiroMQ') //Escucha los mensajes con el patrón realizar_retiro
-    async handleRetiro(@Payload() data: { id: number; monto: number }) {
-      const queryRunner = this.coreRepository.createQueryRunner();
-      await queryRunner.connect();
-
-    try {
-      console.log('Inicio de handleRetiro');
-      console.log(`Datos recibidos: ${JSON.stringify(data)}`);
-      console.log(`Mensaje de Retiro recibido: ID=${data.id}, Monto=${data.monto}`);
-      //return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
-    } catch (error) {
-    console.error('Error en handleRetiro:', error);
-    throw new Error('Internal server error');
-  }
-  }
-
-  /*@Post('MessageMQ')   
-  async sendMessage(@Body () message: any) {     
-    await this.rabbitMQservice.sendMessage("MessageMQ", message);     
-    return { status: 'Mensaje enviado', message }; }*/
+  
 }

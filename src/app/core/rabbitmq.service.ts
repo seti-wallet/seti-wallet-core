@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
+import { ClientProxy, ClientProxyFactory, Ctx, MessagePattern, Payload, RmqContext, Transport } from '@nestjs/microservices';
 import * as amqp from 'amqplib';
+import { async, lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
@@ -9,7 +10,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   private readonly RABBITMQ_URL = 'amqp://admin:seti2024@192.168.9.44:30001';
   private readonly QUEUE_NAME = 'jairo-edu-viky-TransaccionesQueue';
-  /*private client:ClientProxy;
+  private client:ClientProxy;
 
   constructor () {
     this.client = ClientProxyFactory.create({
@@ -20,7 +21,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
          queueOptions: { durable: true }, 
         },
        });
-  }*/
+  }
 
   async onModuleInit() {
     try {
@@ -45,21 +46,24 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     console.log('Conexión a RabbitMQ cerrada.');
   }
 
-  // Método para enviar mensajes a RabbitMQ
-  async sendMessage(message: any) {
+  @MessagePattern('messageMQ')
+  async handleMessage(@Payload() message: any, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMessage = context.getMessage();
+ 
+    console.log('Mensaje recibido:', message);
+ 
     try {
-      const messageBuffer = Buffer.from(JSON.stringify(message));
-      this.channel.sendToQueue(this.QUEUE_NAME, messageBuffer, {
-        persistent: true,
-      });
-      console.log(`Mensaje enviado a RabbitMQ: ${JSON.stringify(message)}`);
+      console.log('Procesando mensaje...');
+      channel.ack(originalMessage); // Confirmación de procesamiento
     } catch (error) {
-      console.error('Error al enviar mensaje a RabbitMQ:', error);
+      console.error('Error procesando el mensaje:', error);
+      channel.nack(originalMessage); // Reenvía el mensaje si hubo un error
     }
   }
 
-   /*async sendMessage(pattern: string, message: any): Promise<void> {     
-    await this.client.send(pattern, message).toPromise();     
+   async sendMessage(pattern: string, message: any): Promise<void> {     
+    await lastValueFrom (this.client.send(pattern, message))
     console.log('Mensaje enviado a RabbitMQ:', message); 
-}*/
+}
 }
