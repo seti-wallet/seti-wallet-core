@@ -2,6 +2,8 @@ import { BadRequestException, Body, Controller, Get, InternalServerErrorExceptio
 import { CoreRepository } from "./core.repository";
 import { AppService, CoreService } from "./core.service";
 import { ClientProxy, MessagePattern, Payload } from '@nestjs/microservices';
+import { RabbitMQService } from "./rabbitmq.service";
+
 
 @Controller('core')
 //@Inject('RABBITMQ_SERVICE')
@@ -12,6 +14,7 @@ export class CoreController {
     private coreRepository: CoreRepository,
     private readonly logger: Logger,
     private appService: AppService,
+    private rabbitMQservice: RabbitMQService
     //private readonly rabbitMqClient: ClientProxy,
   ) { }
 
@@ -166,11 +169,15 @@ export class CoreController {
       console.log('Inicio de handleRetiro');
       console.log(`Datos recibidos: ${JSON.stringify(data)}`);
       console.log(`Mensaje de Retiro recibido: ID=${data.id}, Monto=${data.monto}`);
-     // return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
+      //return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
     } catch (error) {
     console.error('Error en handleRetiro:', error);
     throw new Error('Internal server error');
   }
   }
-  
+
+  /*@Post('MessageMQ')   
+  async sendMessage(@Body () message: any) {     
+    await this.rabbitMQservice.sendMessage("MessageMQ", message);     
+    return { status: 'Mensaje enviado', message }; }*/
 }

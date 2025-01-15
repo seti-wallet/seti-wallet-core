@@ -14,6 +14,7 @@ async function bootstrap() {
    queueOptions: {
     durable: true,
    },
+   noAck: false,
   },
  });
 
@@ -29,6 +30,10 @@ async function bootstrap() {
    client.send('retiroMQ', { id: '1', monto: 1 }).subscribe((response) => {
     console.log('Respuesta del microservicio:', response);
    });
+
+   /*client.send('consignar/1', { valor: 1 }).subscribe((response) => {
+    console.log('Respuesta del microservicio_2:', response);
+   });*/
 
  await microservice.listen();
  console.log('Microservicio de RabbitMQ escuchando...');

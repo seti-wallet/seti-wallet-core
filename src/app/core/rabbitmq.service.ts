@@ -1,4 +1,5 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ClientProxy, ClientProxyFactory, Transport } from '@nestjs/microservices';
 import * as amqp from 'amqplib';
 
 @Injectable()
@@ -8,6 +9,18 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
   private readonly RABBITMQ_URL = 'amqp://admin:seti2024@192.168.9.44:30001';
   private readonly QUEUE_NAME = 'jairo-edu-viky-TransaccionesQueue';
+  /*private client:ClientProxy;
+
+  constructor () {
+    this.client = ClientProxyFactory.create({
+        transport: Transport.RMQ,
+        options: {
+         urls: ['amqp://admin:seti2024@192.168.9.44:30001'], 
+         queue: 'jairo-edu-viky-TransaccionesQueue',
+         queueOptions: { durable: true }, 
+        },
+       });
+  }*/
 
   async onModuleInit() {
     try {
@@ -44,4 +57,9 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       console.error('Error al enviar mensaje a RabbitMQ:', error);
     }
   }
+
+   /*async sendMessage(pattern: string, message: any): Promise<void> {     
+    await this.client.send(pattern, message).toPromise();     
+    console.log('Mensaje enviado a RabbitMQ:', message); 
+}*/
 }
