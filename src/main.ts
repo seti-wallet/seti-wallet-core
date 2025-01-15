@@ -9,7 +9,7 @@ async function bootstrap() {
  const microservice = await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
   transport: Transport.RMQ,
   options: {
-   urls: ['amqp://admin:seti2024@192.168.9.44:5672'], 
+   urls: ['amqp://admin:seti2024@192.168.9.44:30001'], 
    queue: 'jairo-edu-viky-TransaccionesQueue', 
    queueOptions: {
     durable: true,
@@ -20,7 +20,7 @@ async function bootstrap() {
  const client: ClientProxy = ClientProxyFactory.create({
     transport: Transport.RMQ,
     options: {
-     urls: ['amqp://admin:seti2024@192.168.9.44:5672'], 
+     urls: ['amqp://admin:seti2024@192.168.9.44:30001'], 
      queue: 'jairo-edu-viky-TransaccionesQueue',
      queueOptions: { durable: true }, 
     },

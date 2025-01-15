@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Logger, NotFoundException, Param, ParseIntPipe, Post, Inject, Injectable } from "@nestjs/common";
 import { CoreRepository } from "./core.repository";
-import { CoreService } from "./core.service";
+import { AppService, CoreService } from "./core.service";
 import { ClientProxy, MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('core')
@@ -11,6 +11,7 @@ export class CoreController {
     private coreService: CoreService,
     private coreRepository: CoreRepository,
     private readonly logger: Logger,
+    private appService: AppService,
     //private readonly rabbitMqClient: ClientProxy,
   ) { }
 
@@ -39,12 +40,21 @@ export class CoreController {
 
     //console.log(payload)
     //console.log(response_1)
+    
+    const messageMQ = {
+      id: 1,
+      type: 'default-type',
+      timestamp: new Date().toISOString(),
+      payload: {},
+    }
 
     try {
       await queryRunner.startTransaction();
       const result = await this.coreRepository.consignarMonto(queryRunner, cuentaNumero, valorNumero);
+      await this.appService.handleRequest(messageMQ);
       await queryRunner.commitTransaction();
       return result;
+      
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw new InternalServerErrorException(error.message);
@@ -70,10 +80,30 @@ export class CoreController {
     @Param('cuenta') cuenta: string,
     @Body('valor') valor: string) {
 
+    // Iniciar una nueva transacción para la consignación 
+    const queryRunner = this.coreRepository.createQueryRunner();
+    await queryRunner.connect();
+    
     const cuentaNumero = parseInt(cuenta, 10);
     const valorNumero = parseFloat(valor);
 
     try {
+      await queryRunner.startTransaction();
+      const result = await this.coreRepository.retirarMonto(queryRunner, cuentaNumero, valorNumero);
+      await queryRunner.commitTransaction();
+      return result;
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw new InternalServerErrorException(error.message);
+      }
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+      else {
+        throw new BadRequestException(error.response, error.message);
+      }
+    }
+    /*try {
       return await this.coreRepository.retirarMonto(
         cuentaNumero,
         valorNumero,
@@ -88,7 +118,7 @@ export class CoreController {
       else {
         throw new BadRequestException(error.response, error.message);
       }
-    }
+    }*/
   }
 
 
@@ -136,7 +166,7 @@ export class CoreController {
       console.log('Inicio de handleRetiro');
       console.log(`Datos recibidos: ${JSON.stringify(data)}`);
       console.log(`Mensaje de Retiro recibido: ID=${data.id}, Monto=${data.monto}`);
-      return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
+     // return await this.coreRepository.retirarMonto(queryRunner, data.id, data.monto);
     } catch (error) {
     console.error('Error en handleRetiro:', error);
     throw new Error('Internal server error');

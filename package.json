@@ -31,12 +31,8 @@
     "amqplib": "^0.10.5",
     "mysql": "^2.18.1",
     "opossum": "^8.4.0",
-<<<<<<< HEAD
     "protobufjs": "^7.4.0",
     "reflect-metadata": "^0.2.0",
-=======
-    "reflect-metadata": "^0.2.2",
->>>>>>> a19da1958081ba9910bb66eb9cd0c3b2b232ad92
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.20"
   },
